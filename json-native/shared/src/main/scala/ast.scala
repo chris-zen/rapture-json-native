@@ -1,15 +1,3 @@
-/******************************************************************************************************************\
-* Rapture JSON, version 2.0.0. Copyright 2010-2015 Jon Pretty, Propensive Ltd.                                     *
-*                                                                                                                  *
-* The primary distribution site is http://rapture.io/                                                              *
-*                                                                                                                  *
-* Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in complance    *
-* with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.            *
-*                                                                                                                  *
-* Unless required by applicable law or agreed to in writing, software distributed under the License is distributed *
-* on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License    *
-* for the specific language governing permissions and limitations under the License.                               *
-\******************************************************************************************************************/
 package rapture.json.jsonBackends.native
 
 import java.util
@@ -26,7 +14,12 @@ private[native] object NativeAst extends JsonAst {
 
   def getArray(array: Any): List[Any] = array match {
     case list: java.util.ArrayList[Any @unchecked] => list.asScala.toList
+    case list: java.util.List[Any @unchecked] => list.asScala.toList
     case list: List[Any] => list
+    case list: collection.immutable.Seq[Any] => list.toList
+    case list: collection.mutable.Seq[Any @unchecked] => list.toList
+    case list: collection.immutable.Set[Any @unchecked] => list.toList
+    case list: collection.mutable.Set[Any @unchecked] => list.toList
     case _ => throw TypeMismatchException(getType(array), DataTypes.Array)
   }
 
@@ -36,67 +29,84 @@ private[native] object NativeAst extends JsonAst {
   }
   
   def getDouble(number: Any): Double = number match {
-    case number: Int => number.doubleValue
-    case number: Long => number.doubleValue
     case number: Double => number
-    case number: BigDecimal => number.doubleValue
     case number: java.math.BigDecimal => number.doubleValue
+    case number: BigDecimal => number.toDouble
     case number: java.math.BigInteger => number.doubleValue
+    case number: BigInt => number.toDouble
+    case number: Long => number.toDouble
+    case number: Int => number.toDouble
+    case number: Short => number.toDouble
+    case number: Byte => number.toDouble
     case _ => throw TypeMismatchException(getType(number), DataTypes.Number)
   }
   
   def getBigDecimal(number: Any): BigDecimal = number match {
-    case number: Int => new java.math.BigDecimal(number)
-    case number: Long => new java.math.BigDecimal(number)
-    case number: Double => BigDecimal(number)
+    case number: java.math.BigDecimal => BigDecimal(number)
     case number: BigDecimal => number
-    case number: java.math.BigDecimal => number
-    case number: java.math.BigInteger => new java.math.BigDecimal(number)
+    case number: Double => BigDecimal(number)
+    case number: java.math.BigInteger => BigDecimal(number)
+    case number: BigInt => BigDecimal(number)
+    case number: Long => BigDecimal(number)
+    case number: Int => BigDecimal(number)
+    case number: Short => BigDecimal(number)
+    case number: Byte => BigDecimal(number)
     case _ => throw TypeMismatchException(getType(number), DataTypes.Number)
   }
   
   def getString(string: Any): String = string match {
-    case string: java.lang.String => string
-    case char: java.lang.Character => char.toString
+    case string: String => string
+    case char: Character => char.toString
       // TODO keyword, symbol, ...?
     case _ => throw TypeMismatchException(getType(string), DataTypes.String)
   }
   
   def getObject(obj: Any): Map[String, Any] = obj match {
     case obj: java.util.HashMap[String @unchecked, Any @unchecked] => obj.asScala.toMap
+    case obj: java.util.Map[String @unchecked, Any @unchecked] => obj.asScala.toMap
+    case obj: collection.immutable.Map[String @unchecked, Any @unchecked] => obj
+    case obj: collection.mutable.Map[String @unchecked, Any @unchecked] => obj.toMap
     case _ => throw TypeMismatchException(getType(obj), DataTypes.Object)
   }
 
   override def getKeys(obj: Any): Iterator[String] = obj match {
-    case obj: java.util.HashMap[String @unchecked, Any @unchecked] => obj.keySet().iterator().asScala
+    case obj: java.util.Map[String @unchecked, Any @unchecked] => obj.keySet().iterator().asScala
+    case obj: collection.immutable.Map[String @unchecked, Any @unchecked] => obj.keysIterator
+    case obj: collection.mutable.Map[String @unchecked, Any @unchecked] => obj.keysIterator
     case _ => throw TypeMismatchException(getType(obj), DataTypes.Object)
   }
 
   override def dereferenceObject(obj: Any, element: String): Any = obj match {
-    case obj: java.util.HashMap[String @unchecked, Any @unchecked] => Option(obj.get(element)).get
+    case obj: java.util.Map[String @unchecked, Any @unchecked] => Option(obj.get(element)).get
+    case obj: collection.immutable.Map[String @unchecked, Any @unchecked] => obj(element)
+    case obj: collection.mutable.Map[String @unchecked, Any @unchecked] => obj(element)
     case _ => throw TypeMismatchException(getType(obj), DataTypes.Object)
   }
 
   override def dereferenceArray(array: Any, index: Int): Any = array match {
-    case array: java.util.ArrayList[Any @unchecked] => array.get(index)
+    case array: java.util.List[Any @unchecked] => array.get(index)
     case array: List[Any] => array(index)
     case _ => throw TypeMismatchException(getType(array), DataTypes.Array)
   }
 
   def setObjectValue(obj: Any, name: String, value: Any): Unit = obj match {
-    case obj: java.util.HashMap[String @unchecked, Any @unchecked] => obj.put(name, value)
+    case obj: java.util.Map[String @unchecked, Any @unchecked] => obj.put(name, value)
+    case obj: collection.mutable.Map[String @unchecked, Any @unchecked] => obj.put(name, value)
   }
   
   def removeObjectValue(obj: Any, name: String): Unit = obj match {
-    case obj: java.util.HashMap[String @unchecked, Any @unchecked] => obj.remove(name)
+    case obj: java.util.Map[String @unchecked, Any @unchecked] => obj.remove(name)
+    case obj: collection.mutable.Map[String @unchecked, Any @unchecked] => obj.remove(name)
   }
   
   def addArrayValue(array: Any, value: Any): Unit = array match {
-    case array: java.util.ArrayList[Any @unchecked] => array.add(value)
+    case array: java.util.List[Any @unchecked] => array.add(value)
+    case array: collection.mutable.Buffer[Any @unchecked] => array += value
   }
   
   def setArrayValue(array: Any, index: Int, value: Any): Unit = array match {
-    case array: java.util.ArrayList[Any @unchecked] => array.set(index, value)
+    case array: java.util.List[Any @unchecked] => array.set(index, value)
+    case array: collection.mutable.Seq[Any @unchecked] => array(index) = value
   }
 
   def nullValue = null
@@ -147,13 +157,14 @@ private[native] object NativeAst extends JsonAst {
   }
   
   def isObject(any: Any): Boolean = any match {
-    case x: java.util.HashMap[String @unchecked, Any @unchecked] => true
+    case x: java.util.Map[String @unchecked, Any @unchecked] => true
+    case x: collection.Map[String @unchecked, Any @unchecked] => true
     case _ => false
   }
   
   def isArray(any: Any): Boolean = any match {
     case x: java.util.ArrayList[Any @unchecked] => true
-    case x: List[Any @unchecked] => true
+    case x: collection.Seq[Any @unchecked] => true
     case _ => false
   }
   

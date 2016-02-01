@@ -36,17 +36,17 @@ lazy val commonSettings = Seq(
   scalaJSStage in Test := FastOptStage,
   concurrentRestrictions in Global ++= Seq(Tags.limitSum(2, Tags.CPU, Tags.Untagged), Tags.limit(Tags.Test, 1)),
   scmInfo := Some(ScmInfo(url("https://github.com/chris-zen/rapture-json-native"),
-    "scm:git:git@github.com:chris-zen/rapture-json-native.git"))
-) //++ scalaMacroDependencies
+    "scm:git:git@github.com:chris-zen/rapture-json-native.git")),
+  libraryDependencies += "com.propensive"             %% "rapture-json"      % "2.0.0-M3"
+)
 
-lazy val raptureSettings = buildSettings ++ commonSettings ++ publishSettings
+lazy val allSettings = buildSettings ++ commonSettings ++ publishSettings
 
 // rapture-json-native
 lazy val `json-native` = crossProject
   .settings(moduleName := "rapture-json-native")
-  .settings(raptureSettings:_*)
+  .settings(allSettings:_*)
   .settings(libraryDependencies ++= Seq(
-    "com.propensive"             %% "rapture-json"      % "2.0.0-M3",
     "com.fasterxml.jackson.core"  % "jackson-databind"  % "2.6.3"))
 
 lazy val jsonNativeJVM = `json-native`.jvm
@@ -55,7 +55,7 @@ lazy val jsonNativeJS = `json-native`.js
 // rapture-json-test
 lazy val `json-test` = crossProject.dependsOn(`json-native`)
   .settings(moduleName := "rapture-json-test")
-  .settings(raptureSettings:_*)
+  .settings(allSettings:_*)
 
 lazy val jsonTestJVM = `json-test`.jvm
 lazy val jsonTestJS = `json-test`.js
