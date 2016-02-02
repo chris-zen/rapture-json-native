@@ -42,23 +42,41 @@ lazy val commonSettings = Seq(
 
 lazy val allSettings = buildSettings ++ commonSettings ++ publishSettings
 
+lazy val root = project.in(file("."))
+  .settings(moduleName := "root")
+  .settings(allSettings)
+  .settings(noPublishSettings)
+  .settings(noSourceSettings)
+  .aggregate(raptureJVM, raptureJS)
+  .dependsOn(raptureJVM, raptureJS)
+
+lazy val raptureJVM = project.in(file(".raptureJVM"))
+  .settings(moduleName := "rapture")
+  .settings(allSettings)
+  .settings(noPublishSettings)
+  .settings(noSourceSettings)
+  .aggregate(jsonNativeJVM)
+  .dependsOn(jsonNativeJVM)
+
+lazy val raptureJS = project.in(file(".raptureJS"))
+  .settings(moduleName := "rapture")
+  .settings(allSettings)
+  .settings(noPublishSettings)
+  .settings(noSourceSettings)
+  .aggregate(jsonNativeJS)
+  .dependsOn(jsonNativeJS)
+  .enablePlugins(ScalaJSPlugin)
+
 // rapture-json-native
 lazy val `json-native` = crossProject
   .settings(moduleName := "rapture-json-native")
   .settings(allSettings:_*)
   .settings(libraryDependencies ++= Seq(
+    //"com.propensive"             %% "rapture-json"      % "2.0.0-M3",
     "com.fasterxml.jackson.core"  % "jackson-databind"  % "2.6.3"))
 
 lazy val jsonNativeJVM = `json-native`.jvm
 lazy val jsonNativeJS = `json-native`.js
-
-// rapture-json-test
-lazy val `json-test` = crossProject.dependsOn(`json-native`)
-  .settings(moduleName := "rapture-json-test")
-  .settings(allSettings:_*)
-
-lazy val jsonTestJVM = `json-test`.jvm
-lazy val jsonTestJS = `json-test`.js
 
 lazy val publishSettings = Seq(
   homepage := Some(url("http://github.com/chris-zen/rapture-json-native/")),
